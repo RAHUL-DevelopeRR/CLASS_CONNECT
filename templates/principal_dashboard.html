@@ -57,8 +57,6 @@
         <button class="sidebar-button" data-page="attendance"><i class="fas fa-chart-line"></i><span class="label">Attendance</span></button>
         <button class="sidebar-button" data-page="daily-absent"><i class="fas fa-user-minus"></i><span class="label">Daily Absent</span></button>
         <button class="sidebar-button" data-page="students"><i class="fas fa-users"></i><span class="label">All Students</span></button>
-        <button class="sidebar-button" data-page="it-students"><i class="fas fa-laptop-code"></i><span class="label">IT Students</span></button>
-        <button class="sidebar-button" data-page="aiml-students"><i class="fas fa-brain"></i><span class="label">AI & ML Students</span></button>
         <button class="sidebar-button" data-page="courses"><i class="fas fa-book"></i><span class="label">Course List</span></button>
         <button class="sidebar-button" data-page="scholarship"><i class="fas fa-award"></i><span class="label">Scholarship Students</span></button>
         <button class="sidebar-button" data-page="day-scholar"><i class="fas fa-bus"></i><span class="label">Day Scholar</span></button>
@@ -87,8 +85,7 @@
     const hostellers = {{ hostellers|tojson|safe }} || [];
     const dayScholars = {{ day_scholars|tojson|safe }} || [];
     const outstayingStudents = {{ outstaying_students|tojson|safe }} || [];
-    const itCount = {{ it_count|tojson|safe }} || 0;
-    const aimlCount = {{ aiml_count|tojson|safe }} || 0;
+    const csbsCount = {{ csbs_count|tojson|safe }} || 0;
 
     const dashboardContent = `
       <div class="space-y-6">
@@ -96,12 +93,8 @@
           <h1 class="text-2xl font-bold text-white mb-2">Principal Dashboard - College Overview</h1>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
             <div class="bg-white/5 rounded p-3">
-              <div class="text-3xl font-bold text-pink-400">${aimlCount}</div>
-              <div class="text-sm text-gray-400">AI & ML Students</div>
-            </div>
-            <div class="bg-white/5 rounded p-3">
-              <div class="text-3xl font-bold text-indigo-400">${itCount}</div>
-              <div class="text-sm text-gray-400">IT Students</div>
+              <div class="text-3xl font-bold text-pink-400">${csbsCount}</div>
+              <div class="text-sm text-gray-400">CSBS Students</div>
             </div>
             <div class="bg-white/5 rounded p-3">
               <div class="text-3xl font-bold text-green-400">${hostellers.length}</div>
@@ -216,62 +209,6 @@
         </div>
       </div>`;
 
-    const itStudentsContent = `
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-semibold text-on-dark">IT Students Details</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-indigo-400 font-semibold">${itCount} IT Students</span>
-          </div>
-        </div>
-        <div class="glass-dark neon-border overflow-hidden">
-          <div class="overflow-x-auto max-h-[70vh] scrollbar-thin">
-            <table class="min-w-full table-glass">
-              <thead class="sticky top-0 z-10">
-                <tr>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Reg No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Name</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Roll No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Class/Sem</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Scholarship</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Hostel/Day</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Bus/Room No</th>
-                </tr>
-              </thead>
-              <tbody id="it-students-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-
-    const aimlStudentsContent = `
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-semibold text-on-dark">AI & ML Students Details</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-pink-400 font-semibold">${aimlCount} AI & ML Students</span>
-          </div>
-        </div>
-        <div class="glass-dark neon-border overflow-hidden">
-          <div class="overflow-x-auto max-h-[70vh] scrollbar-thin">
-            <table class="min-w-full table-glass">
-              <thead class="sticky top-0 z-10">
-                <tr>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Reg No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Name</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Roll No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Class/Sem</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Scholarship</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Hostel/Day</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Bus/Room No</th>
-                </tr>
-              </thead>
-              <tbody id="aiml-students-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-
     const coursesContent = `
 <div class="container mx-auto">
   <div class="flex items-center justify-between mb-6">
@@ -374,68 +311,6 @@
       body.innerHTML = allStudentsData.map(s=>`<tr class="border-b border-white/5 hover:bg-white/5">${cols.map(c=>`<td class="px-3 py-2 text-[12px] truncate align-top" title="${s[c.key]||''}\">${s[c.key]||''}</td>`).join('')}</tr>`).join('');
     }
 
-    async function loadITStudents(){
-      const tbody = document.getElementById('it-students-body');
-      if (!tbody) return;
-      
-      try {
-        const res = await fetch('/students?dept=IT');
-        const data = await res.json();
-        const itStudents = Array.isArray(data) ? data : [];
-        
-        tbody.innerHTML = itStudents.map(s => {
-          const hostelDay = s.day_scholar_or_hosteller || '';
-          const busRoomNo = hostelDay.toLowerCase().includes('day') ? (s.bus_no || '') : (s.hosteller_room_no || '');
-          const scholarship = s.scholarship || s.remarks || '';
-          
-          return `
-            <tr class="border-b border-white/5 hover:bg-white/5">
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.reg_no || ''}">${s.reg_no || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.name || ''}">${s.name || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.rollno || ''}">${s.rollno || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.current_semester || ''}">${s.current_semester || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${scholarship}">${scholarship}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${hostelDay}">${hostelDay}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${busRoomNo}">${busRoomNo}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-2 text-center text-red-400">Error loading IT students</td></tr>';
-      }
-    }
-
-    async function loadAIMLStudents(){
-      const tbody = document.getElementById('aiml-students-body');
-      if (!tbody) return;
-      
-      try {
-        const res = await fetch('/students?dept=AI & ML');
-        const data = await res.json();
-        const aimlStudents = Array.isArray(data) ? data : [];
-        
-        tbody.innerHTML = aimlStudents.map(s => {
-          const hostelDay = s.day_scholar_or_hosteller || '';
-          const busRoomNo = hostelDay.toLowerCase().includes('day') ? (s.bus_no || '') : (s.hosteller_room_no || '');
-          const scholarship = s.scholarship || s.remarks || '';
-          
-          return `
-            <tr class="border-b border-white/5 hover:bg-white/5">
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.reg_no || ''}">${s.reg_no || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.name || ''}">${s.name || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.rollno || ''}">${s.rollno || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.current_semester || ''}">${s.current_semester || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${scholarship}">${scholarship}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${hostelDay}">${hostelDay}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${busRoomNo}">${busRoomNo}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-2 text-center text-red-400">Error loading AI & ML students</td></tr>';
-      }
-    }
-
     async function populateDeptSelect(elementId) {
         const depts = await fetchDepartments();
         const selectEl = document.getElementById(elementId);
@@ -473,8 +348,6 @@
             renderTable();
           }, 0);
           break;
-        case 'it-students': render(itStudentsContent); setTimeout(loadITStudents, 0); break;
-        case 'aiml-students': render(aimlStudentsContent); setTimeout(loadAIMLStudents, 0); break;
         case 'daily-absent': render(dashboardContent); setTimeout(()=>{ loadAbsent(); loadLow(); }, 0); break;
         case 'courses': render(coursesContent); setTimeout(loadCourses, 0); break;
         case 'scholarship':

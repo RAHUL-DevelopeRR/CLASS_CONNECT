@@ -7,10 +7,23 @@ from functools import wraps
 import os
 import json
 import time
+import base64
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from openpyxl import load_workbook
 from google.oauth2.service_account import Credentials
+
+# --- LOAD CREDENTIALS FROM ENVIRONMENT (for deployment) ---
+# If GOOGLE_CREDENTIALS_BASE64 env var exists, decode and write credentials.json
+creds_b64 = os.environ.get('GOOGLE_CREDENTIALS_BASE64')
+if creds_b64:
+    try:
+        creds_json = base64.b64decode(creds_b64).decode('utf-8')
+        with open('credentials.json', 'w') as f:
+            f.write(creds_json)
+        print("✅ Loaded credentials from environment variable")
+    except Exception as e:
+        print(f"⚠️ Failed to decode credentials from env: {e}")
 
 # --- FLASK APP ---
 
@@ -95,10 +108,8 @@ def get_today_absent_students(department=None):
     
     # Get all students from the department
     # Be robust: use rollno prefix OR current_semester match
-    if department == 'IT':
-        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '323UIT%' OR current_semester = 'IT'")
-    elif department == 'AI & ML':
-        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '323UAM%' OR current_semester = 'AI & ML'")
+    if department == 'CSBS':
+        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '927623BCB%' OR current_semester = 'CSBS'")
     else:
         cur.execute("SELECT rollno, name FROM students")
     
@@ -128,10 +139,8 @@ def get_low_attendance_students(threshold=75, department=None):
     cur = conn_local.cursor()
     
     # Get all students from the department
-    if department == 'IT':
-        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '323UIT%'")
-    elif department == 'AI & ML':
-        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '323UAM%'")
+    if department == 'CSBS':
+        cur.execute("SELECT rollno, name FROM students WHERE rollno LIKE '927623BCB%'")
     else:
         cur.execute("SELECT rollno, name FROM students")
     
@@ -162,14 +171,12 @@ def get_low_attendance_students(threshold=75, department=None):
     return sorted(low_attendance_students, key=lambda x: x['attendance'])
 
 def get_department_students(department):
-    """Get students by department (IT or AI & ML)"""
+    """Get students by department (CSBS)"""
     conn_local = sqlite3.connect('school.db')
     cur = conn_local.cursor()
     
-    if department == 'IT':
-        cur.execute("SELECT * FROM students WHERE rollno LIKE '323UIT%' OR current_semester = 'IT'")
-    elif department == 'AI & ML':
-        cur.execute("SELECT * FROM students WHERE rollno LIKE '323UAM%' OR current_semester = 'AI & ML'")
+    if department == 'CSBS':
+        cur.execute("SELECT * FROM students WHERE rollno LIKE '927623BCB%' OR current_semester = 'CSBS'")
     else:
         cur.execute("SELECT * FROM students")
     
@@ -542,16 +549,9 @@ def _find_credentials_file():
 
 GOOGLE_CREDENTIALS_FILE = _find_credentials_file()
 # Defaults wired to provided sheet links; override with env vars if needed
-# Support multiple spreadsheets by using comma-separated IDs (merged together)
-# Existing AI & ML sheet IDs + IT department sheet IDs provided by user
-_DEFAULT_STUDENTS_IDS = ",".join([
-    "11-fZZNhO7MzKaThXLgyqqV_L5gJcjXC9yc7iWlp3fCo",  # AI & ML students
-    "1p1aog2h0sTvk4wsc4G_Q4Pch4uSIzTF4LOe7qfnUj6k",   # IT students
-])
-_DEFAULT_ATTENDANCE_IDS = ",".join([
-    "1OgLsxcweN2xBo1okhKaeCN2D1PGwmCd50kxEFXHohnM",  # AI & ML attendance
-    "1dklKH7KY3g0Zy92axIrXE1qIdEMSQvFxPnyLL-LqYnY",  # IT attendance
-])
+# CSBS department sheet IDs
+_DEFAULT_STUDENTS_IDS = "1aLsMcTkLzRwYoeRvIrw-Fbvjj-pEW3EjtywG7OMF00o"  # CSBS students
+_DEFAULT_ATTENDANCE_IDS = ""  # Set your CSBS attendance sheet ID here
 STUDENTS_SHEET_ID = os.environ.get("STUDENTS_SHEET_ID", _DEFAULT_STUDENTS_IDS)
 ATTENDANCE_SHEET_ID = os.environ.get("ATTENDANCE_SHEET_ID", _DEFAULT_ATTENDANCE_IDS)
 def get_sheet_range(spreadsheet_id, default_range, range_type="data"):
@@ -1256,14 +1256,14 @@ def load_attendance_from_gsheets():
                     unique_statuses.add(status)
     print(f"[DEBUG] Unique status values found: {sorted(unique_statuses)}")
 
-    # Check for IT-specific roll numbers in the data
-    it_rollnos_in_sheet = set()
+    # Check for CSBS-specific roll numbers in the data
+    csbs_rollnos_in_sheet = set()
     for row in merged:
         if rollno_idx < len(row) and row[rollno_idx]:
             rollno = str(row[rollno_idx]).strip()
-            if rollno and ('IT' in rollno.upper() or rollno.startswith('3') or rollno.startswith('4')):
-                it_rollnos_in_sheet.add(rollno)
-    print(f"[DEBUG] Found {len(it_rollnos_in_sheet)} potential IT roll numbers in attendance sheet: {sorted(list(it_rollnos_in_sheet))[:10]}...")
+            if rollno and ('BCB' in rollno.upper() or rollno.startswith('927623')):
+                csbs_rollnos_in_sheet.add(rollno)
+    print(f"[DEBUG] Found {len(csbs_rollnos_in_sheet)} potential CSBS roll numbers in attendance sheet: {sorted(list(csbs_rollnos_in_sheet))[:10]}...")
 
     # Clear existing attendance data now that we have valid headers and rows
     try:
@@ -1276,7 +1276,7 @@ def load_attendance_from_gsheets():
         return
 
     inserted_count = 0
-    it_attendance_count = 0
+    csbs_attendance_count = 0
     for row in values[1:]:
         if rollno_idx >= len(row):
             print(f"[DEBUG] Skipping row (rollno_idx out of range): {row}")
@@ -1286,7 +1286,7 @@ def load_attendance_from_gsheets():
             print(f"[DEBUG] Skipping row (no rollno): {row}")
             continue
 
-        is_it_student = 'IT' in rollno.upper() or rollno.startswith('3') or rollno.startswith('4')
+        is_csbs_student = 'BCB' in rollno.upper() or rollno.startswith('927623')
 
         for idx in date_columns:
             date_label = str(headers[idx]).strip()
@@ -1303,10 +1303,10 @@ def load_attendance_from_gsheets():
 
             c.execute("INSERT INTO attendance (rollno, date, status) VALUES (?, ?, ?)", (rollno, date_label, status))
             inserted_count += 1
-            if is_it_student:
-                it_attendance_count += 1
+            if is_csbs_student:
+                csbs_attendance_count += 1
 
-    print(f"[DEBUG] Attendance import: total rows inserted={inserted_count}, IT student rows={it_attendance_count}")
+    print(f"[DEBUG] Attendance import: total rows inserted={inserted_count}, CSBS student rows={csbs_attendance_count}")
     conn.commit()
     _last_attendance_sync_ts = int(time.time())
 
@@ -1321,10 +1321,10 @@ def load_attendance_from_gsheets():
         sample_records = c.fetchall()
         print(f"[DEBUG] Sample attendance records: {sample_records}")
 
-        # Check for IT students with attendance data
-        c.execute("SELECT DISTINCT rollno FROM attendance WHERE rollno LIKE '%IT%' OR rollno LIKE '3%' OR rollno LIKE '4%' LIMIT 10")
-        it_students_with_attendance = c.fetchall()
-        print(f"[DEBUG] IT students with attendance data: {[s[0] for s in it_students_with_attendance]}")
+        # Check for CSBS students with attendance data
+        c.execute("SELECT DISTINCT rollno FROM attendance WHERE rollno LIKE '%BCB%' OR rollno LIKE '927623%' LIMIT 10")
+        csbs_students_with_attendance = c.fetchall()
+        print(f"[DEBUG] CSBS students with attendance data: {[s[0] for s in csbs_students_with_attendance]}")
 
     except Exception as e:
         print(f"[ERROR] Failed to verify attendance data: {e}")
@@ -1603,17 +1603,17 @@ def test_it_attendance_sheet():
             results["sheet_analysis"]["date_columns"] = date_columns
             results["sheet_analysis"]["total_date_columns"] = len(date_columns)
 
-            # Check for IT roll numbers in the data
-            it_rollnos = set()
+            # Check for CSBS roll numbers in the data
+            csbs_rollnos = set()
             for row in values[1:]:
                 if rollno_idx < len(row) and row[rollno_idx]:
                     rollno = str(row[rollno_idx]).strip()
-                    # Check if this looks like an IT roll number
-                    if rollno and ('IT' in rollno.upper() or rollno.startswith('3') or rollno.startswith('4')):
-                        it_rollnos.add(rollno)
+                    # Check if this looks like a CSBS roll number
+                    if rollno and ('BCB' in rollno.upper() or rollno.startswith('927623')):
+                        csbs_rollnos.add(rollno)
 
-            results["sheet_analysis"]["potential_it_rollnos"] = sorted(list(it_rollnos))[:20]  # Show first 20
-            results["sheet_analysis"]["total_it_rollnos_found"] = len(it_rollnos)
+            results["sheet_analysis"]["potential_csbs_rollnos"] = sorted(list(csbs_rollnos))[:20]  # Show first 20
+            results["sheet_analysis"]["total_csbs_rollnos_found"] = len(csbs_rollnos)
 
             # Check unique status values
             unique_statuses = set()
@@ -2030,10 +2030,8 @@ def teacher_dashboard():
     # Determine department from teacher name/ID pattern (fallback)
     if not department:
         user_id = session.get('user', '')
-        if 'IT' in user_id.upper():
-            department = 'IT'
-        elif 'AM' in user_id.upper() or 'AI' in user_id.upper():
-            department = 'AI & ML'
+        if 'CSBS' in user_id.upper() or 'BCB' in user_id.upper():
+            department = 'CSBS'
     
     # Get department-specific students
     department_students = get_department_students(department) if department else []
@@ -2047,20 +2045,16 @@ def teacher_dashboard():
     today_absent = get_today_absent_students(department)
     low_attendance = get_low_attendance_students(75, department)
     
-    # Compute overall department counts for IT and AI & ML
-    it_count = 0
-    aiml_count = 0
+    # Compute overall department count for CSBS
+    csbs_count = 0
     try:
         conn_local = sqlite3.connect('school.db')
         cur = conn_local.cursor()
-        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UIT%' OR current_semester = 'IT'")
-        it_count = int(cur.fetchone()[0] or 0)
-        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UAM%' OR current_semester = 'AI & ML'")
-        aiml_count = int(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '927623BCB%' OR current_semester = 'CSBS'")
+        csbs_count = int(cur.fetchone()[0] or 0)
         conn_local.close()
     except Exception:
-        it_count = it_count or 0
-        aiml_count = aiml_count or 0
+        csbs_count = 0
     
     return render_template(
         'teacher_dashboard.html',
@@ -2071,8 +2065,7 @@ def teacher_dashboard():
         outstaying_students=outstaying_students,
         today_absent=today_absent,
         low_attendance=low_attendance,
-        it_count=it_count,
-        aiml_count=aiml_count
+        csbs_count=csbs_count
     )
 
 @app.route('/hod_dashboard')
@@ -2089,10 +2082,8 @@ def hod_dashboard():
     # Determine department from HOD name/ID pattern (fallback)
     if not department:
         user_id = session.get('user', '')
-        if 'IT' in user_id.upper():
-            department = 'IT'
-        elif 'AI' in user_id.upper() or 'ML' in user_id.upper():
-            department = 'AI & ML'
+        if 'CSBS' in user_id.upper() or 'BCB' in user_id.upper():
+            department = 'CSBS'
     
     # Get department-specific students
     department_students = get_department_students(department) if department else []
@@ -2111,27 +2102,21 @@ def hod_dashboard():
     courses = c.fetchall()
     
     # Fetch attendance data for the department
-    if department == 'IT':
-        c.execute("SELECT * FROM attendance WHERE rollno LIKE '323UIT%'")
-    elif department == 'AI & ML':
-        c.execute("SELECT * FROM attendance WHERE rollno LIKE '323UAM%'")
+    if department == 'CSBS':
+        c.execute("SELECT * FROM attendance WHERE rollno LIKE '927623BCB%'")
     else:
         c.execute("SELECT * FROM attendance")
     attendance = c.fetchall()
-    # Compute overall department counts for IT and AI & ML
-    it_count = 0
-    aiml_count = 0
+    # Compute overall department count for CSBS
+    csbs_count = 0
     try:
         conn_local = sqlite3.connect('school.db')
         cur = conn_local.cursor()
-        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UIT%' OR current_semester = 'IT'")
-        it_count = int(cur.fetchone()[0] or 0)
-        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UAM%' OR current_semester = 'AI & ML'")
-        aiml_count = int(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '927623BCB%' OR current_semester = 'CSBS'")
+        csbs_count = int(cur.fetchone()[0] or 0)
         conn_local.close()
     except Exception:
-        it_count = it_count or 0
-        aiml_count = aiml_count or 0
+        csbs_count = 0
     
     return render_template(
         'hod_dashboard.html',
@@ -2144,8 +2129,7 @@ def hod_dashboard():
         low_attendance=low_attendance,
         courses=courses,
         attendance=attendance,
-        it_count=it_count,
-        aiml_count=aiml_count
+        csbs_count=csbs_count
     )
 @app.route('/principal_dashboard')
 @login_required('principal')
@@ -2167,23 +2151,18 @@ def principal_dashboard():
         c.execute("SELECT * FROM courses")
         courses = c.fetchall() or []
         
-        # Compute overall department counts for IT and AI & ML
-        it_count = 0
-        aiml_count = 0
+        # Compute overall department count for CSBS
+        csbs_count = 0
         try:
             conn_local = sqlite3.connect('school.db')
             cur = conn_local.cursor()
-            cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UIT%' OR current_semester = 'IT'")
+            cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '927623BCB%' OR current_semester = 'CSBS'")
             result = cur.fetchone()
-            it_count = int(result[0] or 0) if result else 0
-            cur.execute("SELECT COUNT(*) FROM students WHERE rollno LIKE '323UAM%' OR current_semester = 'AI & ML'")
-            result = cur.fetchone()
-            aiml_count = int(result[0] or 0) if result else 0
+            csbs_count = int(result[0] or 0) if result else 0
             conn_local.close()
         except Exception as e:
             print(f"Error computing counts: {e}")
-            it_count = 0
-            aiml_count = 0
+            csbs_count = 0
         
         return render_template(
             'principal_dashboard.html',
@@ -2194,8 +2173,7 @@ def principal_dashboard():
             today_absent=today_absent,
             low_attendance=low_attendance,
             courses=courses,
-            it_count=it_count,
-            aiml_count=aiml_count
+            csbs_count=csbs_count
         )
     except Exception as e:
         print(f"Error in principal_dashboard: {e}")
@@ -2209,8 +2187,7 @@ def principal_dashboard():
             today_absent=[],
             low_attendance=[],
             courses=[],
-            it_count=0,
-            aiml_count=0
+            csbs_count=0
         )
 
 @app.route('/student_dashboard')
@@ -2257,10 +2234,8 @@ def get_students():
     elif role == 'hod':
         # HOD can ONLY see their own department (no cross-department access)
         if dept:
-            if dept == 'IT':
-                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UIT%'", (dept,))
-            elif dept == 'AI & ML':
-                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UAM%'", (dept,))
+            if dept == 'CSBS':
+                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '927623BCB%'", (dept,))
             else:
                 cur.execute("SELECT * FROM students WHERE current_semester = ?", (dept,))
         else:
@@ -2268,10 +2243,8 @@ def get_students():
     else:
         # Teacher remains restricted to their department
         if dept:
-            if dept == 'IT':
-                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UIT%'", (dept,))
-            elif dept == 'AI & ML':
-                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UAM%'", (dept,))
+            if dept == 'CSBS':
+                cur.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '927623BCB%'", (dept,))
             else:
                 cur.execute("SELECT * FROM students WHERE current_semester = ?", (dept,))
         else:
@@ -3374,23 +3347,14 @@ def teacher_all_students_attendance_averages():
         dept = None
     if dept:
         norm = (dept or '').strip().upper().replace(' ', '')
-        if norm == 'IT':
-            # Match by roll prefix or any current_semester containing IT
+        if norm == 'CSBS':
+            # Match by roll prefix or any current_semester containing CSBS
             c.execute(
                 """
                 SELECT id, name, rollno, reg_no, current_semester
                 FROM students
-                WHERE rollno LIKE '323UIT%'
-                   OR UPPER(REPLACE(current_semester, ' ', '')) LIKE '%IT%'
-                """
-            )
-        elif norm in ('AI&ML','AIML','AIANDML'):
-            c.execute(
-                """
-                SELECT id, name, rollno, reg_no, current_semester
-                FROM students
-                WHERE rollno LIKE '323UAM%'
-                   OR UPPER(REPLACE(current_semester, ' ', '')) LIKE '%AI%ML%'
+                WHERE rollno LIKE '927623BCB%'
+                   OR UPPER(REPLACE(current_semester, ' ', '')) LIKE '%CSBS%'
                 """
             )
         else:
@@ -3526,10 +3490,8 @@ def hod_all_students_attendance_averages():
 
     # Return only students from HOD's department
     if department:
-        if department == 'IT':
-            cur_local.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UIT%'", (department,))
-        elif department == 'AI & ML':
-            cur_local.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '323UAM%'", (department,))
+        if department == 'CSBS':
+            cur_local.execute("SELECT * FROM students WHERE current_semester = ? OR rollno LIKE '927623BCB%'", (department,))
         else:
             cur_local.execute("SELECT * FROM students WHERE current_semester = ?", (department,))
     else:
@@ -3617,10 +3579,8 @@ def hod_daily_absent_students():
             cur_local = conn_local.cursor()
         # HOD can only see their own department
         if department:
-            if department == 'IT':
-                cur_local.execute("SELECT rollno, name, current_semester FROM students WHERE current_semester=? OR rollno LIKE '323UIT%'", (department,))
-            elif department == 'AI & ML':
-                cur_local.execute("SELECT rollno, name, current_semester FROM students WHERE current_semester=? OR rollno LIKE '323UAM%'", (department,))
+            if department == 'CSBS':
+                cur_local.execute("SELECT rollno, name, current_semester FROM students WHERE current_semester=? OR rollno LIKE '927623BCB%'", (department,))
             else:
                 cur_local.execute("SELECT rollno, name, current_semester FROM students WHERE current_semester=?", (department,))
         else:
@@ -3800,43 +3760,43 @@ def debug_it_attendance_analysis():
     }
 
     try:
-        # Step 1: Check if IT students exist in database
+        # Step 1: Check if CSBS students exist in database
         conn_local = sqlite3.connect('school.db')
         cur = conn_local.cursor()
 
-        cur.execute("SELECT COUNT(*) FROM students WHERE current_semester LIKE '%IT%'")
-        it_students_count = cur.fetchone()[0]
-        results["steps"].append(f"✓ Found {it_students_count} IT students in database")
+        cur.execute("SELECT COUNT(*) FROM students WHERE current_semester LIKE '%CSBS%' OR rollno LIKE '927623BCB%'")
+        csbs_students_count = cur.fetchone()[0]
+        results["steps"].append(f"✓ Found {csbs_students_count} CSBS students in database")
 
-        # Step 2: Check attendance data for IT students
+        # Step 2: Check attendance data for CSBS students
         cur.execute("""
             SELECT s.rollno, s.name, s.current_semester, COUNT(a.id) as attendance_count
             FROM students s
             LEFT JOIN attendance a ON s.rollno = a.rollno
-            WHERE s.current_semester LIKE '%IT%'
+            WHERE s.current_semester LIKE '%CSBS%' OR s.rollno LIKE '927623BCB%'
             GROUP BY s.rollno, s.name, s.current_semester
             ORDER BY attendance_count DESC
         """)
-        it_attendance_data = cur.fetchall()
+        csbs_attendance_data = cur.fetchall()
 
-        results["data_analysis"]["it_students_with_attendance"] = []
-        total_it_attendance_records = 0
+        results["data_analysis"]["csbs_students_with_attendance"] = []
+        total_csbs_attendance_records = 0
 
-        for row in it_attendance_data:
+        for row in csbs_attendance_data:
             rollno, name, department, attendance_count = row
-            results["data_analysis"]["it_students_with_attendance"].append({
+            results["data_analysis"]["csbs_students_with_attendance"].append({
                 "rollno": rollno,
                 "name": name,
                 "department": department,
                 "attendance_records": attendance_count
             })
-            total_it_attendance_records += attendance_count
+            total_csbs_attendance_records += attendance_count
 
-        results["steps"].append(f"✓ Total IT attendance records: {total_it_attendance_records}")
+        results["steps"].append(f"✓ Total CSBS attendance records: {total_csbs_attendance_records}")
 
-        # Step 3: Check for IT students with no attendance
-        it_students_no_attendance = [student for student in it_attendance_data if student[3] == 0]
-        results["steps"].append(f"✓ IT students with no attendance: {len(it_students_no_attendance)}")
+        # Step 3: Check for CSBS students with no attendance
+        csbs_students_no_attendance = [student for student in csbs_attendance_data if student[3] == 0]
+        results["steps"].append(f"✓ CSBS students with no attendance: {len(csbs_students_no_attendance)}")
 
         # Step 4: Check attendance sheet structure
         try:
@@ -3844,20 +3804,20 @@ def debug_it_attendance_analysis():
             cur.execute("""
                 SELECT DISTINCT rollno, date, status
                 FROM attendance
-                WHERE rollno IN (SELECT rollno FROM students WHERE current_semester LIKE '%IT%')
+                WHERE rollno IN (SELECT rollno FROM students WHERE current_semester LIKE '%CSBS%' OR rollno LIKE '927623BCB%')
                 ORDER BY date DESC
                 LIMIT 10
             """)
             sample_attendance = cur.fetchall()
 
             if sample_attendance:
-                results["data_analysis"]["sample_it_attendance"] = [
+                results["data_analysis"]["sample_csbs_attendance"] = [
                     {"rollno": row[0], "date": row[1], "status": row[2]}
                     for row in sample_attendance
                 ]
-                results["steps"].append("✓ Sample IT attendance data found")
+                results["steps"].append("✓ Sample CSBS attendance data found")
             else:
-                results["steps"].append("✗ No IT attendance data found in database")
+                results["steps"].append("✗ No CSBS attendance data found in database")
 
         except Exception as e:
             results["errors"].append(f"Error analyzing attendance data: {e}")
@@ -3867,7 +3827,7 @@ def debug_it_attendance_analysis():
             SELECT s.rollno as student_rollno, a.rollno as attendance_rollno
             FROM students s
             LEFT JOIN attendance a ON s.rollno = a.rollno
-            WHERE s.current_semester LIKE '%IT%'
+            WHERE (s.current_semester LIKE '%CSBS%' OR s.rollno LIKE '927623BCB%')
             AND (a.rollno IS NULL OR s.rollno != a.rollno)
             LIMIT 5
         """)
@@ -3882,26 +3842,26 @@ def debug_it_attendance_analysis():
         else:
             results["steps"].append("✓ No obvious roll number mismatches")
 
-        # Step 6: Check unique statuses for IT students
+        # Step 6: Check unique statuses for CSBS students
         cur.execute("""
             SELECT DISTINCT status
             FROM attendance
-            WHERE rollno IN (SELECT rollno FROM students WHERE current_semester LIKE '%IT%')
+            WHERE rollno IN (SELECT rollno FROM students WHERE current_semester LIKE '%CSBS%' OR rollno LIKE '927623BCB%')
             AND status IS NOT NULL AND status != ''
         """)
         unique_statuses = cur.fetchall()
 
         if unique_statuses:
-            results["data_analysis"]["it_unique_statuses"] = [row[0] for row in unique_statuses]
-            results["steps"].append(f"✓ Found unique statuses for IT students: {results['data_analysis']['it_unique_statuses']}")
+            results["data_analysis"]["csbs_unique_statuses"] = [row[0] for row in unique_statuses]
+            results["steps"].append(f"✓ Found unique statuses for CSBS students: {results['data_analysis']['csbs_unique_statuses']}")
         else:
-            results["steps"].append("✗ No status values found for IT students")
+            results["steps"].append("✗ No status values found for CSBS students")
 
         conn_local.close()
         results["success"] = True
 
     except Exception as e:
-        results["errors"].append(f"Error in IT attendance analysis: {e}")
+        results["errors"].append(f"Error in CSBS attendance analysis: {e}")
 
     return jsonify(results)
 if __name__ == '__main__':

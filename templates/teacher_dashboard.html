@@ -249,25 +249,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const hostellers = {{ hostellers|tojson|safe }} || [];
     const dayScholars = {{ day_scholars|tojson|safe }} || [];
     const outstayingStudents = {{ outstaying_students|tojson|safe }} || [];
-    const itCount = {{ it_count|tojson|safe }} || 0;
-    const aimlCount = {{ aiml_count|tojson|safe }} || 0;
+    const csbsCount = {{ csbs_count|tojson|safe }} || 0;
     // Initialize the working dataset with department-specific students so View table renders rows
     allStudents = Array.isArray(departmentStudents) ? departmentStudents : [];
     
     // Build stats cards dynamically per department
     const statsCards = [];
-    if (teacherDepartment === 'AI & ML') {
+    if (teacherDepartment === 'CSBS') {
       statsCards.push(`
           <div class="bg-white/5 rounded p-3">
-            <div class="text-3xl font-bold text-pink-400">${aimlCount}</div>
-            <div class="text-sm text-gray-400">AI & ML Students</div>
-          </div>`);
-    }
-    if (teacherDepartment === 'IT') {
-      statsCards.push(`
-          <div class="bg-white/5 rounded p-3">
-            <div class="text-3xl font-bold text-indigo-400">${itCount}</div>
-            <div class="text-sm text-gray-400">IT Students</div>
+            <div class="text-3xl font-bold text-pink-400">${csbsCount}</div>
+            <div class="text-sm text-gray-400">CSBS Students</div>
           </div>`);
     }
     statsCards.push(`
@@ -510,62 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>`;
 
-    const itStudentsContent = `
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-semibold text-on-dark">IT Students Details</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-indigo-400 font-semibold">${itCount} IT Students</span>
-          </div>
-        </div>
-        <div class="glass-dark neon-border overflow-hidden">
-          <div class="overflow-x-auto max-h-[70vh] scrollbar-thin">
-            <table class="min-w-full table-glass">
-              <thead class="sticky top-0 z-10">
-                <tr>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Reg No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Name</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Roll No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Class/Sem</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Scholarship</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Hostel/Day</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Bus/Room No</th>
-                </tr>
-              </thead>
-              <tbody id="it-students-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-
-    const aimlStudentsContent = `
-      <div class="container mx-auto">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-semibold text-on-dark">AI & ML Students Details</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-pink-400 font-semibold">${aimlCount} AI & ML Students</span>
-          </div>
-        </div>
-        <div class="glass-dark neon-border overflow-hidden">
-          <div class="overflow-x-auto max-h-[70vh] scrollbar-thin">
-            <table class="min-w-full table-glass">
-              <thead class="sticky top-0 z-10">
-                <tr>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Reg No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Name</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Roll No</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Class/Sem</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Scholarship</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Hostel/Day</th>
-                  <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-on-dark/80 text-left whitespace-nowrap">Bus/Room No</th>
-                </tr>
-              </thead>
-              <tbody id="aiml-students-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-
     const scholarshipContent = `
 <div class="container mx-auto">
   <div class="flex items-center justify-between mb-3">
@@ -601,68 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>`;
 
-
-    async function loadITStudents(){
-      const tbody = document.getElementById('it-students-body');
-      if (!tbody) return;
-      
-      try {
-        const res = await fetch('/students?dept=IT');
-        const data = await res.json();
-        const itStudents = Array.isArray(data) ? data : [];
-        
-        tbody.innerHTML = itStudents.map(s => {
-          const hostelDay = s.day_scholar_or_hosteller || '';
-          const busRoomNo = hostelDay.toLowerCase().includes('day') ? (s.bus_no || '') : (s.hosteller_room_no || '');
-          const scholarship = s.scholarship || s.remarks || '';
-          
-          return `
-            <tr class="border-b border-white/5 hover:bg-white/5">
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.reg_no || ''}">${s.reg_no || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.name || ''}">${s.name || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.rollno || ''}">${s.rollno || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.current_semester || ''}">${s.current_semester || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${scholarship}">${scholarship}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${hostelDay}">${hostelDay}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${busRoomNo}">${busRoomNo}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-2 text-center text-red-400">Error loading IT students</td></tr>';
-      }
-    }
-
-    async function loadAIMLStudents(){
-      const tbody = document.getElementById('aiml-students-body');
-      if (!tbody) return;
-      
-      try {
-        const res = await fetch('/students?dept=AI & ML');
-        const data = await res.json();
-        const aimlStudents = Array.isArray(data) ? data : [];
-        
-        tbody.innerHTML = aimlStudents.map(s => {
-          const hostelDay = s.day_scholar_or_hosteller || '';
-          const busRoomNo = hostelDay.toLowerCase().includes('day') ? (s.bus_no || '') : (s.hosteller_room_no || '');
-          const scholarship = s.scholarship || s.remarks || '';
-          
-          return `
-            <tr class="border-b border-white/5 hover:bg-white/5">
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.reg_no || ''}">${s.reg_no || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.name || ''}">${s.name || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.rollno || ''}">${s.rollno || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${s.current_semester || ''}">${s.current_semester || ''}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${scholarship}">${scholarship}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${hostelDay}">${hostelDay}</td>
-              <td class="px-3 py-2 text-[12px] truncate align-top" title="${busRoomNo}">${busRoomNo}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-3 py-2 text-center text-red-400">Error loading AI & ML students</td></tr>';
-      }
-    }
 
     function renderFiltered(list, cols){
       const hdr = document.getElementById('flt-hdr'); const body = document.getElementById('flt-body'); if (!hdr||!body) return;
@@ -702,8 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
           renderContent(teacherFullStudentTableContent);
           setTimeout(() => { renderTeacherFullStudentTable(allStudents); }, 0);
           break;
-        case "it-students": renderContent(itStudentsContent); setTimeout(loadITStudents, 0); break;
-        case "aiml-students": renderContent(aimlStudentsContent); setTimeout(loadAIMLStudents, 0); break;
         case "scholarship":
           renderContent(scholarshipContent);
           setTimeout(async ()=>{

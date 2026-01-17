@@ -84,8 +84,7 @@
     const hostellers = {{ hostellers|tojson|safe }} || [];
     const dayScholars = {{ day_scholars|tojson|safe }} || [];
     const outstayingStudents = {{ outstaying_students|tojson|safe }} || [];
-    const itCount = {{ it_count|tojson|safe }} || 0;
-    const aimlCount = {{ aiml_count|tojson|safe }} || 0;
+    const csbsCount = {{ csbs_count|tojson|safe }} || 0;
     
     let allStudents = departmentStudents;
 
@@ -95,12 +94,8 @@
           <h1 class="text-2xl font-bold text-white mb-2">${hodDepartment} Department - HOD Dashboard</h1>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
             <div class="bg-white/5 rounded p-3">
-              <div class="text-3xl font-bold text-pink-400">${aimlCount}</div>
-              <div class="text-sm text-gray-400">AI & ML Students</div>
-            </div>
-            <div class="bg-white/5 rounded p-3">
-              <div class="text-3xl font-bold text-indigo-400">${itCount}</div>
-              <div class="text-sm text-gray-400">IT Students</div>
+              <div class="text-3xl font-bold text-pink-400">${csbsCount}</div>
+              <div class="text-sm text-gray-400">CSBS Students</div>
             </div>
             <div class="bg-white/5 rounded p-3">
               <div class="text-3xl font-bold text-green-400">${hostellers.length}</div>
